@@ -1,0 +1,7 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>simPod/renovatebot-presets:ts-lib"
+  ],
+  "includeForks": true
+}
