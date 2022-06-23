@@ -25,19 +25,27 @@
     "src/**/*.js"
   ],
   "scripts": {
-    "pretest": "rollup -c",
-    "test": "tape 'test/**/*-test.js' && eslint src",
-    "prepublishOnly": "rm -rf dist && yarn test",
-    "postpublish": "git push && git push --tags && zip -j dist/${npm_package_name}.zip -- LICENSE README.md dist/${npm_package_name}.js dist/${npm_package_name}.min.js"
+    "test": "mocha -r module-alias/register 'test/**/*-test.js' && eslint --ext js src test",
+    "prepublishOnly": "rm -rf dist && rollup -c",
+    "postpublish": "git push && git push --tags"
   },
+  "_moduleAliases": {
+    "d3-sankey": "./src/index.js"
+  },
+  "sideEffects": false,
+  "type": "module",
   "dependencies": {
     "d3-array": "1 - 2",
     "d3-shape": "^1.2.0"
   },
   "devDependencies": {
-    "eslint": "8",
-    "rollup": "2",
-    "rollup-plugin-terser": "5",
-    "tape": "4"
+    "@babel/core": "^7.18.5",
+    "@babel/eslint-parser": "^7.18.2",
+    "@babel/plugin-syntax-import-assertions": "^7.17.12",
+    "eslint": "^8",
+    "mocha": "^10",
+    "module-alias": "^2",
+    "rollup": "^2",
+    "rollup-plugin-terser": "^7"
   }
 }

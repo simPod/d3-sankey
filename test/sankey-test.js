@@ -1,12 +1,14 @@
-var tape = require("tape"),
-    d3 = require("../");
+import * as d3 from "../src/index.js";
+import assert from "assert";
+import energyJson from "./energy.json" assert {type: "json"};
+import energyNodes from "./energy-nodes.json" assert {type: "json"};
+import energyLinks from "./energy-links.json" assert {type: "json"};
 
-tape("sankey(energy) returns the expected results", function(test) {
+it("sankey(energy) returns the expected results", () => {
   var sankey = d3.sankey().nodeWidth(15).nodePadding(10).extent([[1, 1], [959, 494]]),
-      energy = sankey(require("./energy"));
-  test.deepEqual(energy.nodes.map(nodePosition), require("./energy-nodes"));
-  test.deepEqual(energy.links.map(linkPosition), require("./energy-links"));
-  test.end();
+      energy = sankey(energyJson);
+  assert.deepEqual(energy.nodes.map(nodePosition), energyNodes);
+  assert.deepEqual(energy.links.map(linkPosition), energyLinks);
 });
 
 function nodePosition(node) {
