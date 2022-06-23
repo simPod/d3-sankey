@@ -35,7 +35,7 @@
     "d3-shape": "^1.2.0"
   },
   "devDependencies": {
-    "eslint": "6",
+    "eslint": "8",
     "rollup": "1",
     "rollup-plugin-terser": "5",
     "tape": "4"
