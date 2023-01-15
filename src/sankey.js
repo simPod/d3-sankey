@@ -214,7 +214,7 @@ export default function Sankey() {
       let y = y0;
       for (const node of nodes) {
         node.y0 = y;
-        node.y1 = y + node.value * ky;
+        node.y1 = y + (node.fixedValue === undefined ? node.value * ky : node.fixedValue);
         y = node.y1 + py;
         for (const link of node.sourceLinks) {
           link.width = link.value * ky;
