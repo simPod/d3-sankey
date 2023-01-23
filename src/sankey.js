@@ -232,7 +232,9 @@ export default function Sankey() {
 
   function computeNodeBreadths(graph) {
     const columns = computeNodeLayers(graph);
-    py = Math.min(dy, (y1 - y0) / (max(columns, c => c.length) - 1));
+    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+
+    py = Math.min(dy, clamp((y1 - y0) / (max(columns, c => c.length) - 1), 0, Infinity));
     initializeNodeBreadths(columns);
     for (let i = 0; i < iterations; ++i) {
       const alpha = Math.pow(0.99, i);
