@@ -58,6 +58,7 @@ export default function Sankey() {
   let id = defaultId;
   let align = justify;
   let sort;
+  let postProcessColumns;
   let linkSort;
   let nodes = defaultNodes;
   let links = defaultLinks;
@@ -89,6 +90,10 @@ export default function Sankey() {
 
   sankey.nodeSort = function(_) {
     return arguments.length ? (sort = _, sankey) : sort;
+  };
+
+  sankey.postProcessColumns = function(_) {
+    return arguments.length ? (postProcessColumns = _, sankey) : postProcessColumns;
   };
 
   sankey.nodeWidth = function(_) {
@@ -149,8 +154,8 @@ export default function Sankey() {
   function computeNodeValues({nodes}) {
     for (const node of nodes) {
       node.value = node.fixedValue === undefined
-          ? Math.max(sum(node.sourceLinks, value), sum(node.targetLinks, value))
-          : node.fixedValue;
+              ? Math.max(sum(node.sourceLinks, value), sum(node.targetLinks, value))
+              : node.fixedValue;
     }
   }
 
@@ -241,6 +246,10 @@ export default function Sankey() {
       const beta = Math.max(1 - alpha, (i + 1) / iterations);
       relaxRightToLeft(columns, alpha, beta);
       relaxLeftToRight(columns, alpha, beta);
+    }
+
+    if (postProcessColumns) {
+      postProcessColumns(columns);
     }
   }
 
