@@ -36,18 +36,37 @@ function find(nodeById, id) {
   return node;
 }
 
-function computeLinkBreadths({nodes}) {
+function computeLinkBreadths(mode, {nodes}) {
   for (const node of nodes) {
-    let y0 = node.y0;
-    let y1 = y0;
-    for (const link of node.sourceLinks) {
-      link.y0 = y0 + link.width / 2;
-      y0 += link.width;
+    if (mode === 'sankey') {
+      let y0 = node.y0;
+      let y1 = y0;
+      for (const link of node.sourceLinks) {
+        link.y0 = y0 + link.width / 2;
+        y0 += link.width;
+      }
+      for (const link of node.targetLinks) {
+        link.y1 = y1 + link.width / 2;
+        y1 += link.width;
+      }
+
+      continue;
     }
-    for (const link of node.targetLinks) {
-      link.y1 = y1 + link.width / 2;
-      y1 += link.width;
+
+    if (mode === 'network') {
+      let y0 = node.y0;
+      let y = y0 + (node.y1 - y0) / 2;
+      for (const link of node.sourceLinks) {
+        link.y0 = y;
+      }
+      for (const link of node.targetLinks) {
+        link.y1 = y;
+      }
+
+      continue;
     }
+
+    throw new Error('Unknown mode: ' + mode);
   }
 }
 
@@ -55,9 +74,11 @@ export default function Sankey() {
   let x0 = 0, y0 = 0, x1 = 1, y1 = 1; // extent
   let dx = 24; // nodeWidth
   let dy = 8, py; // nodePadding
+  let mode = 'sankey';
   let id = defaultId;
   let align = justify;
   let sort;
+  let postProcessColumns;
   let linkSort;
   let nodes = defaultNodes;
   let links = defaultLinks;
@@ -70,12 +91,12 @@ export default function Sankey() {
     computeNodeDepths(graph);
     computeNodeHeights(graph);
     computeNodeBreadths(graph);
-    computeLinkBreadths(graph);
+    computeLinkBreadths(mode, graph);
     return graph;
   }
 
   sankey.update = function(graph) {
-    computeLinkBreadths(graph);
+    computeLinkBreadths(mode, graph);
     return graph;
   };
 
@@ -91,12 +112,22 @@ export default function Sankey() {
     return arguments.length ? (sort = _, sankey) : sort;
   };
 
+  sankey.postProcessColumns = function(_) {
+    return arguments.length ? (postProcessColumns = _, sankey) : postProcessColumns;
+  };
+
   sankey.nodeWidth = function(_) {
     return arguments.length ? (dx = +_, sankey) : dx;
   };
 
   sankey.nodePadding = function(_) {
     return arguments.length ? (dy = py = +_, sankey) : dy;
+  };
+
+  sankey.mode = function(_) {
+    mode = _;
+
+    return sankey;
   };
 
   sankey.nodes = function(_) {
@@ -149,8 +180,8 @@ export default function Sankey() {
   function computeNodeValues({nodes}) {
     for (const node of nodes) {
       node.value = node.fixedValue === undefined
-          ? Math.max(sum(node.sourceLinks, value), sum(node.targetLinks, value))
-          : node.fixedValue;
+              ? Math.max(sum(node.sourceLinks, value), sum(node.targetLinks, value))
+              : node.fixedValue;
     }
   }
 
@@ -193,14 +224,48 @@ export default function Sankey() {
   function computeNodeLayers({nodes}) {
     const x = max(nodes, d => d.depth) + 1;
     const kx = (x1 - x0 - dx) / (x - 1);
+    const canvasWidth = x1 - x0 - dx;
+    const computeLabelLength = (node) => (node.label ?? node.name ?? node.id ?? '').length * 7 + 20;
+
     const columns = new Array(x);
+    const maxColumnWidths = new Array(x);
+
     for (const node of nodes) {
       const i = Math.max(0, Math.min(x - 1, Math.floor(align.call(null, node, x))));
       node.layer = i;
-      node.x0 = x0 + i * kx;
-      node.x1 = node.x0 + dx;
-      if (columns[i]) columns[i].push(node);
-      else columns[i] = [node];
+
+      if (columns[i]) {
+        columns[i].push(node);
+      } else {
+        columns[i] = [node];
+      }
+
+      if (mode === 'network') {
+        const labelLength = computeLabelLength(node);
+
+        if (maxColumnWidths[i] === undefined) {
+          maxColumnWidths[i] = labelLength;
+        } else {
+          maxColumnWidths[i] = Math.max(maxColumnWidths[i], labelLength);
+        }
+      }
+    }
+
+    const columnWidthsSum = maxColumnWidths.reduce((a, b) => a + b, 0);
+    const columnSpanWidth = (canvasWidth - columnWidthsSum) / x;
+
+    for (const node of nodes) {
+      const i = Math.max(0, Math.min(x - 1, Math.floor(align.call(null, node, x))));
+      if (mode === 'sankey') {
+        node.x0 = x0 + i * kx;
+        node.x1 = node.x0 + dx;
+      } else if (mode === 'network') {
+        node.x0 = x0 + i * columnSpanWidth
+          + Array(i).fill(0).reduce((a, b, index) => a + maxColumnWidths[index], 0);
+        node.x1 = node.x0 + maxColumnWidths[i];
+      } else {
+        throw new Error('Unknown mode: ' + mode);
+      }
     }
     if (sort) for (const column of columns) {
       column.sort(sort);
@@ -210,8 +275,8 @@ export default function Sankey() {
 
   function initializeNodeBreadths(columns) {
     const ky = min(columns, c => (y1 - y0 - (c.length - 1) * py) / sum(c, value));
-    for (const nodes of columns) {
-      let y = y0;
+    for (const [columnIndex, nodes] of columns.entries()) {
+      let y = y0 + (mode === 'network' ? columnIndex * py / 2 : 0);
       for (const node of nodes) {
         node.y0 = y;
         node.y1 = y + (node.fixedValue === undefined ? node.value * ky : node.fixedValue);
@@ -241,6 +306,10 @@ export default function Sankey() {
       const beta = Math.max(1 - alpha, (i + 1) / iterations);
       relaxRightToLeft(columns, alpha, beta);
       relaxLeftToRight(columns, alpha, beta);
+    }
+
+    if (postProcessColumns) {
+      postProcessColumns(columns);
     }
   }
 
