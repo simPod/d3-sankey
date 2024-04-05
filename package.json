@@ -42,7 +42,7 @@
     "@babel/core": "^7.18.5",
     "@babel/eslint-parser": "^7.18.2",
     "@babel/plugin-syntax-import-assertions": "^7.17.12",
-    "eslint": "^8",
+    "eslint": "^9.0.0",
     "mocha": "^10",
     "module-alias": "^2",
     "rollup": "^2",
