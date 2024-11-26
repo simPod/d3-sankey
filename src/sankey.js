@@ -227,18 +227,14 @@ export default function Sankey() {
     const canvasWidth = x1 - x0 - dx;
     const computeLabelLength = (node) => (node.label ?? node.name ?? node.id ?? '').length * 7 + 20;
 
-    const columns = new Array(x);
+    const columns = new Array(x).fill().map(() => []);
     const maxColumnWidths = new Array(x);
 
     for (const node of nodes) {
       const i = Math.max(0, Math.min(x - 1, Math.floor(align.call(null, node, x))));
       node.layer = i;
 
-      if (columns[i]) {
-        columns[i].push(node);
-      } else {
-        columns[i] = [node];
-      }
+      columns[i].push(node);
 
       if (mode === 'network') {
         const labelLength = computeLabelLength(node);
